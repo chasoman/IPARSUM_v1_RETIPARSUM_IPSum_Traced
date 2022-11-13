@@ -1,0 +1,52 @@
+BROKER SCHEMA com.integration.samples.involvedpartyarrangementsummary.v1.retrieveiparrangementsummary.involvedpartysummary.traced
+
+
+CREATE COMPUTE MODULE Main_TransformToServiceResponseCompute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE outLocalEnvRef REFERENCE TO OutputLocalEnvironment;
+		DECLARE opStatus CHARACTER '';
+		DECLARE inMsgBody REFERENCE TO InputRoot;
+		DECLARE outMsgBody REFERENCE TO OutputRoot;
+		
+		-- recreate the destination data for the soap reply
+		CREATE LASTCHILD OF OutputLocalEnvironment 
+			AS outLocalEnvRef NAME 'Destination';
+		SET outLocalEnvRef = InputLocalEnvironment.REST
+								.UserContext.InputDestinationData;
+
+
+		CREATE LASTCHILD OF OutputRoot.SOAP.Body AS outMsgBody 
+			NAMESPACE ns NAME 'retrieveIPArrangementSummaryResponse';
+			
+		MOVE inMsgBody TO InputRoot.JSON.Data.getCustomerSummaryResponse;
+
+
+		SET opStatus = COALESCE(inMsgBody.status,'NOT FOUND');
+		SET outMsgBody.status = opStatus;
+
+		IF opStatus = 'SUCCESS' THEN
+			
+			SET outMsgBody.individual.name.prefixTitle = inMsgBody.customerSummary.prefixTitle;
+			SET outMsgBody.individual.name.firstName = inMsgBody.customerSummary.firstName;
+			SET outMsgBody.individual.name.middleName = inMsgBody.customerSummary.middleName;
+			SET outMsgBody.individual.name.lastName = inMsgBody.customerSummary.lastName;
+			SET outMsgBody.individual.name.suffixTitle = inMsgBody.customerSummary.suffixTitle;
+			SET outMsgBody.individual.gender = inMsgBody.customerSummary.gender;
+			SET outMsgBody.individual.dateOfBirthYYYYMMDD = inMsgBody.customerSummary.birthDate;
+			SET outMsgBody.individual.dateOfDeathYYYYMMDD = inMsgBody.customerSummary.deathDate;
+			SET outMsgBody.individual.permanentAddress.addressLine1 = inMsgBody.customerSummary.permanentAddress.addressLine1;
+			SET outMsgBody.individual.permanentAddress.addressLine2 = inMsgBody.customerSummary.permanentAddress.addressLine2;
+			SET outMsgBody.individual.permanentAddress.addressLine3 = inMsgBody.customerSummary.permanentAddress.addressLine3;
+			SET outMsgBody.individual.permanentAddress.city = inMsgBody.customerSummary.permanentAddress.city;
+			SET outMsgBody.individual.permanentAddress.postCode = inMsgBody.customerSummary.permanentAddress.postCode;
+			SET outMsgBody.individual.permanentAddress.countryCodeISO = inMsgBody.customerSummary.permanentAddress.countryCode;
+			SET outMsgBody.individual.contactPhoneNumber = inMsgBody.customerSummary.phoneNumber;
+			SET outMsgBody.individual.contactEmailAddress = inMsgBody.customerSummary.emailAddress;
+		
+		END IF;		
+		
+		RETURN TRUE;
+	END;
+
+END MODULE;

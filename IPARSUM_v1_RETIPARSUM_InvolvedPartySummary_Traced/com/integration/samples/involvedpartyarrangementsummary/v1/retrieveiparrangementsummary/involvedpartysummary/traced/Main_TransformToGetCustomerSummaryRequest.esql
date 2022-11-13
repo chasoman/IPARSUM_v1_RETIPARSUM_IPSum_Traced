@@ -1,0 +1,31 @@
+BROKER SCHEMA com.integration.samples.involvedpartyarrangementsummary.v1.retrieveiparrangementsummary.involvedpartysummary.traced
+DECLARE ns NAMESPACE 'http://samples.integration.com/InvolvedPartyArrangementSummary/v1';
+
+
+CREATE COMPUTE MODULE Main_TransformToGetCustomerSummaryRequest
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE localEnvRef REFERENCE TO OutputLocalEnvironment;
+		
+		-- Copy Input Local Environment destination information to 
+		--   the output local environment User Context. 
+		-- Since async request/response nodes work in separate threads,
+		--   this step is necessary to maintain reply context
+		-- Refer https://www.ibm.com/docs/en/integration-bus/10.0
+		--          ?topic=cera-interacting-asynchronously-rest-apis-by-using-
+		--            restasyncrequest-restasyncresponse-nodes
+		CREATE LASTCHILD OF OutputLocalEnvironment.Destination
+			.REST.Request.UserContext AS localEnvRef NAME 'InputDestinationData';
+		SET localEnvRef = InputLocalEnvironment.Destination;
+		
+		-- Set a value for path parameter customerId 
+		--	derived from the service SOAP request
+		CREATE LASTCHILD OF OutputLocalEnvironment.Destination
+			.REST.Request.Parameters AS localEnvRef NAME 'customerId';
+		SET localEnvRef = InputRoot.SOAP.Body
+			.ns:retrieveIPArrangementSummaryRequest.involvedPartyId;
+		
+		RETURN TRUE;
+	END;
+
+END MODULE;
